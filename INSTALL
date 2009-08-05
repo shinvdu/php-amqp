@@ -1,0 +1,8 @@
+Download and install:
+    http://hg.rabbitmq.com/rabbitmq-c/
+    http://hg.rabbitmq.com/rabbitmq-codegen/
+
+then:
+phpize && configure --with-amqp && make
+sudo make install
+
