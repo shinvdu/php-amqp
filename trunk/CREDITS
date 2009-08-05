@@ -1,0 +1,4 @@
+Author of the php extension: Marcel Oelke <moelke@studivz.net>
+Uses librabbitmq from http://hg.rabbitmq.com/rabbitmq-c/
+Thanks to the guys at rabbitmq.com!
+
