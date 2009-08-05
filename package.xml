@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE package SYSTEM "../pear/package.dtd">
+<package>
+ <dep type="php" rel="ge" version="4.3.0" optional="no"/>
+ <name>amqp</name>
+ <summary>Advanced Message Queuing Protocol</summary>
+ <maintainers>
+  <maintainer>
+   <user>moelke</user>
+   <name>Marcel Oelke</name>
+   <email>moelke@studivz.net</email>
+   <role>lead</role>
+  </maintainer>
+ </maintainers>
+ <description> 
+ Support for the AMQP (Advanced Message Queuing Protocol) using librabbitmq.
+ </description>
+ <license>PHP license 3.01</license>
+ <release>
+  <state>beta</state>
+  <version>0.0.2</version>
+  <date>2009-07-31</date>
+  <notes>Added support for amqp_basic_properties</notes>
+ </release>
+  <configureoptions>
+  </configureoptions>
+  <filelist>
+    <file role="doc" name="CREDITS" />
+    <file role="doc" name="INSTALL" />
+    <file role="doc" name="EXPERIMENTAL" />
+    <file role="src" name="config.m4" />
+    <file role="src" name="amqp.c" />
+    <file role="src" name="amqp.php" />
+    <file role="src" name="php_amqp.h" />
+    <file role="src" name="example.php" />
+    <dir role="test" name="tests">
+      <file role="test" name="001.phpt" />
+    </dir>
+  </filelist>
+  <changelog>
+   <release>
+    <state>beta</state>
+    <version>0.0.2</version>
+    <date>2009-08-05</date>
+    <notes>Added support for amqp_basic_properties</notes>
+   </release>
+   <release>
+    <state>beta</state>
+    <version>0.0.1</version>
+    <date>2009-07-31</date>
+    <notes>First version</notes>
+   </release>
+ </changelog>
+</package>
+<!--
+vim:et:ts=1:sw=1
+-->
