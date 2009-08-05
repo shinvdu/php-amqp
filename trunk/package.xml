@@ -30,7 +30,6 @@
     <file role="doc" name="EXPERIMENTAL" />
     <file role="src" name="config.m4" />
     <file role="src" name="amqp.c" />
-    <file role="src" name="amqp.php" />
     <file role="src" name="php_amqp.h" />
     <file role="src" name="example.php" />
     <dir role="test" name="tests">
