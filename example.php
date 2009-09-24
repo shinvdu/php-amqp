@@ -1,7 +1,15 @@
 <?php
-ini_set("extension_dir", dirname(__FILE__).'/modules');
-dl("amqp.so");
+error_reporting(E_ALL);
+var_dump(get_included_files());
 
+restore_exception_handler();
+restore_error_handler();
+xdebug_disable();
+
+ini_set("extension_dir", dirname(__FILE__).'/modules');
+if (!extension_loaded("amqp")) {
+    dl("amqp.so");
+}
 
 if (!extension_loaded("amqp")) {
     die("extension amqp not loaded!\n");
@@ -12,7 +20,12 @@ $hostname = "localhost";
 $port     = 5672;
 
 // create a connection ...
-$connection = amqp_new_connection($hostname, 5672 );
+$connection = amqp_connection_popen($hostname, 5672 );
+
+if (!is_resource($connection)) {
+   var_dump($connection);
+   die("connection failed");
+}
 
 $user = "guest";
 $pass = "guest";
@@ -24,8 +37,9 @@ $sasl_method = 0;
 // login ...
 $res = amqp_login($connection, $user, $pass, $vhost, $channel_max, $frame_max, $sasl_method);
 
-
 $channel_id = 1;
+$res = amqp_channel_open($connection, 1);
+
 $exchange ="amq.direct";
 $routing_key = "test queue";
 $body = "";
@@ -68,4 +82,6 @@ for ($i = 0; $i < 1; $i++) {
 
 $end = microtime(true);
 echo "Total publish time: " . ($end - $start) ."\n";
+
+
 

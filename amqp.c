@@ -24,8 +24,15 @@
   
 #include "php.h"
 #include "php_ini.h"
+#include "php_globals.h"
 #include "ext/standard/info.h"
+#include "ext/standard/php_string.h"
+
+
+
 #include "php_amqp.h"
+
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -44,15 +51,21 @@ ZEND_DECLARE_MODULE_GLOBALS(amqp)
 
 /* True global resources - no need for thread safety here */
 static int le_amqp;
-#define le_amqp_name "Amqp Connection"
+static int le_amqp_persistent;
 
-void _php_amqp_error(amqp_rpc_reply_t x, char const *context);
+
+#define PHP_AMQP_RES_NAME "Amqp Connection"
+
+
+int _php_amqp_error(amqp_rpc_reply_t x, char const *context);
 void _php_amqp_socket_error(int retval, char const *context);
 
 
 typedef struct {
     amqp_connection_state_t amqp_conn;
     int sockfd;
+    int num_channels;
+    bool logged_in;
 } amqp_connection;
 
 /**
@@ -60,15 +73,41 @@ typedef struct {
  */
 static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
+    return;
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
-        amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
-        amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
-        amqp_destroy_connection(amqp_conn->amqp_conn);
-        close(amqp_conn->sockfd);   
+        // amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
+        if (amqp_conn->amqp_conn) {
+            amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
+            amqp_destroy_connection(amqp_conn->amqp_conn);
+        }
+        if (amqp_conn->sockfd) {
+            close(amqp_conn->sockfd);
+        }
         efree(amqp_conn);
     }
 }
+
+/**
+ * Clean up the persistent connection ...
+ */
+static void _close_amqp_pconnection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
+{
+        return;
+        amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
+        if (amqp_conn) {
+            // amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
+            if (amqp_conn->amqp_conn) {
+                amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
+                amqp_destroy_connection(amqp_conn->amqp_conn);
+            }
+            if (amqp_conn->sockfd) {
+                close(amqp_conn->sockfd);
+            }
+            pefree(amqp_conn, 1);
+        }
+}
+
 
 /* {{{ amqp_functions[]
  *
@@ -76,8 +115,11 @@ static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
  */
 zend_function_entry amqp_functions[] = {
     PHP_FE(confirm_amqp_compiled,   NULL)       /* For testing, remove later. */
-    PHP_FE(amqp_new_connection, NULL)
+    PHP_FE(amqp_connection_open, NULL)
+    PHP_FE(amqp_connection_popen, NULL)    
     PHP_FE(amqp_login,  NULL)
+    PHP_FE(amqp_channel_open,  NULL)
+    PHP_FE(amqp_channel_close,  NULL)        
     PHP_FE(amqp_connection_close,   NULL)
     PHP_FE(amqp_basic_publish,  NULL)
     {NULL, NULL, NULL}  /* Must be the last line in amqp_functions[] */
@@ -94,8 +136,8 @@ zend_module_entry amqp_module_entry = {
     amqp_functions,
     PHP_MINIT(amqp),
     PHP_MSHUTDOWN(amqp),
-    NULL, // PHP_RINIT(amqp),        /* Replace with NULL if there's nothing to do at request start */
-    NULL, // PHP_RSHUTDOWN(amqp),    /* Replace with NULL if there's nothing to do at request end */
+    PHP_RINIT(amqp),        /* Replace with NULL if there's nothing to do at request start */
+    PHP_RSHUTDOWN(amqp),    /* Replace with NULL if there's nothing to do at request end */
     PHP_MINFO(amqp),
 #if ZEND_MODULE_API_NO >= 20010901
     "0.1", /* Replace with version number for your extension */
@@ -137,7 +179,8 @@ PHP_MINIT_FUNCTION(amqp)
     REGISTER_INI_ENTRIES();
     */
     
-    le_amqp = zend_register_list_destructors_ex(_close_amqp_connection, NULL, "Amqp Connection", module_number);  
+    le_amqp = zend_register_list_destructors_ex(_close_amqp_connection, NULL, PHP_AMQP_RES_NAME, module_number);  
+    le_amqp_persistent = zend_register_list_destructors_ex(_close_amqp_pconnection, NULL, PHP_AMQP_RES_NAME, module_number);  
     return SUCCESS;
 }
 /* }}} */
@@ -219,9 +262,9 @@ PHP_FUNCTION(confirm_amqp_compiled)
    follow this convention for the convenience of others editing your code.
 */
 
-/* {{{ proto resource amqp_new_connection(string hostname, int port)
+/* {{{ proto resource amqp_connection_open(string hostname, int port)
     */
-PHP_FUNCTION(amqp_new_connection)
+PHP_FUNCTION(amqp_connection_open)
 {
     int argc = ZEND_NUM_ARGS();
     char *hostname = NULL;
@@ -233,7 +276,7 @@ PHP_FUNCTION(amqp_new_connection)
     if (zend_parse_parameters(argc TSRMLS_CC, "sl", &hostname, &hostname_len, &port) == FAILURE) {
         return;
     }
-    
+
     amqp_conn->amqp_conn = amqp_new_connection();
     if (!amqp_conn->amqp_conn) {
         efree(amqp_conn);
@@ -246,8 +289,67 @@ PHP_FUNCTION(amqp_new_connection)
         RETURN_FALSE;
     }
     amqp_set_sockfd(amqp_conn->amqp_conn, amqp_conn->sockfd);
+    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Created normal NON persistent resource!!");
+    
+    amqp_conn->num_channels = 0;
+    amqp_conn->logged_in = 0;
     
     ZEND_REGISTER_RESOURCE(return_value, amqp_conn, le_amqp);
+}
+/* }}} */
+
+
+/* {{{ proto resource amqp_connection_popen(string hostname, int port)
+    */
+PHP_FUNCTION(amqp_connection_popen)
+{
+    int argc = ZEND_NUM_ARGS();
+    char *hostname = NULL;
+    int hostname_len;
+    int port = 5672;
+    
+    char *key;
+    int  key_len;
+    list_entry *le, new_le;
+
+    if (zend_parse_parameters(argc TSRMLS_CC, "sl", &hostname, &hostname_len, &port) == FAILURE) {
+        return;
+    }
+
+    /* Look for an established resource */
+    key_len = spprintf(&key, 0, "amqp_%s_%d ", hostname, port);
+    if (zend_hash_find(&EG(persistent_list), key, key_len + 1, (void **) &le) == SUCCESS) {
+        php_error_docref(NULL TSRMLS_CC, E_NOTICE, "RE-Using persistent resource!! %s", key);
+        ZEND_REGISTER_RESOURCE(return_value, le->ptr, le_amqp_persistent);
+        efree(key);
+        return;
+    }
+    
+    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "NOT!!! RE-Using persistent resource!! %s", key);
+    
+    amqp_connection *amqp_conn = (amqp_connection*)pemalloc(sizeof(amqp_connection), 1);    
+    ZEND_REGISTER_RESOURCE(return_value, amqp_conn, le_amqp_persistent);
+    
+    amqp_conn->amqp_conn = amqp_new_connection();
+    if (!amqp_conn->amqp_conn) {
+        pefree(amqp_conn, 1);
+        php_error(E_WARNING, "Error opening connection.");
+        RETURN_FALSE;
+    }
+    if (!(amqp_conn->sockfd = amqp_open_socket(hostname, port))) {
+        pefree(amqp_conn, 1);
+        php_error(E_WARNING, "Error opening socket.");
+        RETURN_FALSE;
+    }
+    amqp_set_sockfd(amqp_conn->amqp_conn, amqp_conn->sockfd);
+    amqp_conn->num_channels = 0;
+    amqp_conn->logged_in = 0;    
+    
+    /* Store a reference in the persistence list */
+    new_le.ptr = amqp_conn;
+    new_le.type = le_amqp_persistent;
+    zend_hash_add(&EG(persistent_list), key, key_len + 1,  &new_le, sizeof(list_entry), NULL);
+    efree(key);    
 }
 /* }}} */
 
@@ -261,8 +363,7 @@ PHP_FUNCTION(amqp_login)
     int vhost_len;
     int user_len;
     int pass_len;        
-    
-    
+
     long channel_max;
     long frame_max;
     long amqp_sasl_method_enum;
@@ -275,19 +376,81 @@ PHP_FUNCTION(amqp_login)
     }
 
     if (connection) {
-        ZEND_FETCH_RESOURCE(amqp_conn, amqp_connection*, &connection, connection_id, "Amqp Connection", le_amqp);
+        ZEND_FETCH_RESOURCE2(amqp_conn, amqp_connection*, &connection, connection_id, PHP_AMQP_RES_NAME, le_amqp, le_amqp_persistent);
+    } else {
+        // TODO: add php_Error
+        return;
+    }
+    
+    if (amqp_conn->logged_in) {
+        // already logged in, return silently
+        RETURN_TRUE;
     }
 
-    _php_amqp_error(amqp_login(amqp_conn->amqp_conn, vhost, channel_max, frame_max, AMQP_SASL_METHOD_PLAIN, user, pass),
-            "Logging in");
-    amqp_channel_open(amqp_conn->amqp_conn, 1);
-    _php_amqp_error(amqp_rpc_reply, "Opening channel");
+    if (!_php_amqp_error(amqp_login(amqp_conn->amqp_conn, vhost, channel_max, frame_max, AMQP_SASL_METHOD_PLAIN, user, pass), "Logging in")) {
+        RETURN_FALSE;
+    };
     
+    amqp_conn->logged_in = 1;
     RETURN_TRUE;
-
-//    php_error(E_WARNING, "amqp_login: not yet implemented");
 }
 /* }}} */
+
+
+PHP_FUNCTION(amqp_channel_open)
+{
+    int argc = ZEND_NUM_ARGS();
+    int connection_id = -1;
+
+    int channel_id = 1;
+    amqp_connection *amqp_conn;    
+    zval *connection = NULL;
+
+    if (zend_parse_parameters(argc TSRMLS_CC, "rl", &connection, &channel_id) == FAILURE) {
+        return;
+    }
+    
+    if (connection) {
+        ZEND_FETCH_RESOURCE2(amqp_conn, amqp_connection*, &connection, connection_id, PHP_AMQP_RES_NAME, le_amqp, le_amqp_persistent);
+    } else {
+        // TODO: add php_Error
+        return;
+    }
+    if (amqp_conn->num_channels == 0) {
+        amqp_channel_open(amqp_conn->amqp_conn, channel_id);    
+        amqp_conn->num_channels = amqp_conn->num_channels +1;
+    }
+}
+
+
+PHP_FUNCTION(amqp_channel_close)
+{
+    int argc = ZEND_NUM_ARGS();
+    int connection_id = -1;
+
+    int channel_id = 1;
+    amqp_connection *amqp_conn;    
+    zval *connection = NULL;
+    
+    if (zend_parse_parameters(argc TSRMLS_CC, "rl", &connection, &channel_id) == FAILURE) {
+        return;
+    }
+    
+    if (connection) {
+        ZEND_FETCH_RESOURCE2(amqp_conn, amqp_connection*, &connection, connection_id, PHP_AMQP_RES_NAME, le_amqp, le_amqp_persistent);
+    } else {
+        // TODO: add php_Error
+        return;
+    }
+    
+    if (amqp_conn->num_channels > 0) {
+        amqp_channel_close(amqp_conn->amqp_conn, channel_id, AMQP_REPLY_SUCCESS);
+    }
+    amqp_conn->num_channels = amqp_conn->num_channels  - 1;
+    
+    // _php_amqp_error(amqp_channel_open(amqp_conn->amqp_conn, channel_id), "Opening channel");        
+}
+
 
 /* {{{ proto void amqp_connection_close(resource connection)
     */
@@ -303,7 +466,7 @@ PHP_FUNCTION(amqp_connection_close)
         return;
 
     if (connection) {
-        ZEND_FETCH_RESOURCE(amqp_conn, amqp_connection*, &connection, connection_id, "Amqp Connection", le_amqp);
+        ZEND_FETCH_RESOURCE2(amqp_conn, amqp_connection*, &connection, connection_id, PHP_AMQP_RES_NAME, le_amqp, le_amqp_persistent);
     } else {
         return;
     }
@@ -313,7 +476,14 @@ PHP_FUNCTION(amqp_connection_close)
 //    amqp_destroy_connection(amqp_conn->amqp_conn);
 //    _php_amqp_socket_error(close(amqp_conn->sockfd), "Closing socket");
 
-    amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
+    int i = 0;
+    if (amqp_conn->num_channels > 0) {
+        for (i = amqp_conn->num_channels; i > 0; i--) {
+            amqp_channel_close(amqp_conn->amqp_conn, i, AMQP_REPLY_SUCCESS);
+        }
+    }
+    amqp_conn->num_channels = 0;
+
     amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
     amqp_destroy_connection(amqp_conn->amqp_conn);
     close(amqp_conn->sockfd);
@@ -336,7 +506,7 @@ PHP_FUNCTION(amqp_basic_publish)
     int exchange_len;
     int routing_key_len;
     int body_len;
-    long channel_id;
+    long channel_id = 1;
     zend_bool mandatory;
     zend_bool immediate;
     zval *connection = NULL;
@@ -352,8 +522,10 @@ PHP_FUNCTION(amqp_basic_publish)
         return;
 
     if (connection) {
-        ZEND_FETCH_RESOURCE(amqp_conn, amqp_connection*, &connection, connection_id, "Amqp Connection", le_amqp);
+        ZEND_FETCH_RESOURCE2(amqp_conn, amqp_connection*, &connection, connection_id, PHP_AMQP_RES_NAME, le_amqp, le_amqp_persistent);
     }
+    
+   php_error_docref(NULL TSRMLS_CC, E_NOTICE, "num_channels: %d, logged_in: %d", amqp_conn->num_channels, amqp_conn->logged_in);    
     
     amqp_basic_properties_t props;
     props._flags = 0;
@@ -430,10 +602,11 @@ PHP_FUNCTION(amqp_basic_publish)
 /* }}} */
 
 
-void _php_amqp_error(amqp_rpc_reply_t x, char const *context) {
+int _php_amqp_error(amqp_rpc_reply_t x, char const *context) {
     switch (x.reply_type) {
         case AMQP_RESPONSE_NORMAL:
-            return;
+            // no error, return 1 / true
+            return 1;
 
         case AMQP_RESPONSE_NONE:
             php_error(E_ERROR, "%s: missing RPC reply type!", context);
@@ -461,6 +634,8 @@ void _php_amqp_error(amqp_rpc_reply_t x, char const *context) {
             }
       break;
   }
+  // at this stage everything is an error.
+  return 0;
 }
 
 
