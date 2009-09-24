@@ -36,13 +36,16 @@ extern zend_module_entry amqp_module_entry;
 
 PHP_MINIT_FUNCTION(amqp);
 PHP_MSHUTDOWN_FUNCTION(amqp);
-// PHP_RINIT_FUNCTION(amqp);
-// PHP_RSHUTDOWN_FUNCTION(amqp);
+PHP_RINIT_FUNCTION(amqp);
+PHP_RSHUTDOWN_FUNCTION(amqp);
 PHP_MINFO_FUNCTION(amqp);
 
 PHP_FUNCTION(confirm_amqp_compiled);	/* For testing, remove later. */
-PHP_FUNCTION(amqp_new_connection);
+PHP_FUNCTION(amqp_connection_open);
+PHP_FUNCTION(amqp_connection_popen);
 PHP_FUNCTION(amqp_login);
+PHP_FUNCTION(amqp_channel_open);
+PHP_FUNCTION(amqp_channel_close);
 PHP_FUNCTION(amqp_connection_close);
 PHP_FUNCTION(amqp_basic_publish);
 
