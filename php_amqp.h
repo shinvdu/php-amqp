@@ -40,7 +40,6 @@ PHP_RINIT_FUNCTION(amqp);
 PHP_RSHUTDOWN_FUNCTION(amqp);
 PHP_MINFO_FUNCTION(amqp);
 
-PHP_FUNCTION(confirm_amqp_compiled);	/* For testing, remove later. */
 PHP_FUNCTION(amqp_connection_open);
 PHP_FUNCTION(amqp_connection_popen);
 PHP_FUNCTION(amqp_login);
@@ -48,12 +47,15 @@ PHP_FUNCTION(amqp_channel_open);
 PHP_FUNCTION(amqp_channel_close);
 PHP_FUNCTION(amqp_connection_close);
 PHP_FUNCTION(amqp_basic_publish);
+PHP_FUNCTION(amqp_exchange_declare);
+PHP_FUNCTION(amqp_queue_declare);
+PHP_FUNCTION(amqp_queue_bind);
+PHP_FUNCTION(amqp_queue_unbind);        
 
 
 /* 
   	Declare any global variables you may need between the BEGIN
 	and END macros here:     
-
 ZEND_BEGIN_MODULE_GLOBALS(amqp)
 	long  global_value;
 	char *global_string;
