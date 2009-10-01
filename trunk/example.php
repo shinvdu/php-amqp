@@ -4,7 +4,7 @@ var_dump(get_included_files());
 
 restore_exception_handler();
 restore_error_handler();
-xdebug_disable();
+// xdebug_disable();
 
 ini_set("extension_dir", dirname(__FILE__).'/modules');
 if (!extension_loaded("amqp")) {
@@ -33,6 +33,8 @@ $vhost = "/";
 $channel_max = 0;
 $frame_max = 131072;
 $sasl_method = 0;
+$queue = 'FeedQueue';
+
 
 // login ...
 $res = amqp_login($connection, $user, $pass, $vhost, $channel_max, $frame_max, $sasl_method);
@@ -40,9 +42,26 @@ $res = amqp_login($connection, $user, $pass, $vhost, $channel_max, $frame_max, $
 $channel_id = 1;
 $res = amqp_channel_open($connection, 1);
 
-$exchange ="amq.direct";
-$routing_key = "test queue";
+$exchange ="feed.direct";
+$routing_key = "TestRoutingKey";
 $body = "";
+
+
+$y = amqp_exchange_declare($connection, $channel_id, $exchange, "direct");
+
+
+$y = amqp_queue_declare($connection, $channel_id, $queue, $passive = false, $durable = false, $exclusive = false, $auto_delete = true);
+
+
+$y = amqp_queue_bind($connection, $channel_id, $queue, $exchange, $routing_key);
+var_dump($y);
+
+
+$y = amqp_queue_unbind($connection, $channel_id, $queue, $exchange, $routing_key);
+var_dump($y);
+
+// die('ende');
+var_dump( $queue, $exchange, $routing_key);
 
 // create a test message
 for ($i = 0; $i < 256; $i++) {
@@ -76,8 +95,10 @@ $options = array(
 
 // send the message to rabbitmq
 $start = microtime(true);
-for ($i = 0; $i < 1; $i++) {
+for ($i = 0; $i < 100; $i++) {
     $res = amqp_basic_publish($connection, $channel_id, $exchange, $routing_key, $body, false, false, $options);
+sleep(1);
+echo ".";
 }
 
 $end = microtime(true);
