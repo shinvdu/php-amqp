@@ -18,9 +18,14 @@
  <license>PHP license 3.01</license>
  <release>
   <state>beta</state>
-  <version>0.0.2</version>
-  <date>2009-08-05</date>
-  <notes>Added support for amqp_basic_properties</notes>
+  <version>0.0.5</version>
+  <date>2009-10-13</date>
+  <notes>
+ * Renamed methods some methods due to inconsistency
+ * Added persistent connections (amqp_connection_popen())
+ * New functions: amqp_exchange_declare(), amqp_queue_declare(), amqp_queue_bind(), amqp_queue_unbind()
+ * Replaced all remaining E_ERROR (fatal, script exits) with E_WARNING (non fatal, script continues)
+</notes>
  </release>
   <configureoptions>
   </configureoptions>
