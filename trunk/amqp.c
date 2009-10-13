@@ -372,6 +372,7 @@ PHP_FUNCTION(amqp_login)
     }
 
     if (!_php_amqp_error(amqp_login(amqp_conn->amqp_conn, vhost, channel_max, frame_max, AMQP_SASL_METHOD_PLAIN, user, pass), "Logging in")) {
+        amqp_conn->logged_in = 0;
         RETURN_FALSE;
     };
     
@@ -861,27 +862,27 @@ int _php_amqp_error(amqp_rpc_reply_t x, char const *context) {
             return 1;
 
         case AMQP_RESPONSE_NONE:
-            php_error(E_ERROR, "%s: missing RPC reply type!", context);
+            php_error(E_WARNING, "%s: missing RPC reply type!", context);
             break;
 
         case AMQP_RESPONSE_LIBRARY_EXCEPTION:
-            php_error(E_ERROR, "%s: %s\n", context, x.library_errno ? strerror(x.library_errno) : "(end-of-stream)");
+            php_error(E_WARNING, "%s: %s\n", context, x.library_errno ? strerror(x.library_errno) : "(end-of-stream)");
             break;
 
         case AMQP_RESPONSE_SERVER_EXCEPTION:
             switch (x.reply.id) {
                 case AMQP_CONNECTION_CLOSE_METHOD: {
                     amqp_connection_close_t *m = (amqp_connection_close_t *) x.reply.decoded;
-                    php_error(E_ERROR, "%s: server connection error %d, message: %.*s", context, m->reply_code, (int) m->reply_text.len, (char *) m->reply_text.bytes);
+                    php_error(E_WARNING, "%s: server connection error %d, message: %.*s", context, m->reply_code, (int) m->reply_text.len, (char *) m->reply_text.bytes);
                 break;
             }
             case AMQP_CHANNEL_CLOSE_METHOD: {
                 amqp_channel_close_t *m = (amqp_channel_close_t *) x.reply.decoded;
-                php_error(E_ERROR, "%s: server channel error %d, message: %.*s", context, m->reply_code, (int) m->reply_text.len, (char *) m->reply_text.bytes);
+                php_error(E_WARNING, "%s: server channel error %d, message: %.*s", context, m->reply_code, (int) m->reply_text.len, (char *) m->reply_text.bytes);
                 break;
             }
             default:
-                php_error(E_ERROR, "%s: unknown server error, method id 0x%08X", context, x.reply.id);
+                php_error(E_WARNING, "%s: unknown server error, method id 0x%08X", context, x.reply.id);
                 break;
             }
       break;
@@ -893,7 +894,7 @@ int _php_amqp_error(amqp_rpc_reply_t x, char const *context) {
 
 int _php_amqp_socket_error(int retval, char const *context) {
     if (retval < 0) {
-        php_error(E_ERROR, "%s: %s\n", context, strerror(-retval));
+        php_error(E_WARNING, "%s: %s\n", context, strerror(-retval));
         return 0;
     }
     return 1;
