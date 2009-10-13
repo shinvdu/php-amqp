@@ -73,10 +73,9 @@ typedef struct {
  */
 static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
-    return;
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
-        // amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
+        amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
         if (amqp_conn->amqp_conn) {
             amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
             amqp_destroy_connection(amqp_conn->amqp_conn);
@@ -93,10 +92,9 @@ static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
  */
 static void _close_amqp_pconnection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
-    // return;
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
-        // amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
+        amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
         if (amqp_conn->amqp_conn) {
             amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
             amqp_destroy_connection(amqp_conn->amqp_conn);
