@@ -65,7 +65,7 @@ typedef struct {
     amqp_connection_state_t amqp_conn;
     int sockfd;
     int num_channels;
-    bool logged_in;
+    int logged_in;
 } amqp_connection;
 
 /**
@@ -488,8 +488,8 @@ PHP_FUNCTION(amqp_basic_publish)
     int routing_key_len;
     int body_len;
     long channel_id = 1;
-    zend_bool mandatory = FALSE;
-    zend_bool immediate = FALSE;
+    zend_bool mandatory = 0;
+    zend_bool immediate = 0;
     zval *connection = NULL;
         
     HashKey key = initHashKey(0);
@@ -615,9 +615,9 @@ PHP_FUNCTION(amqp_exchange_declare)
     char *type = NULL;
     int type_len;
     
-    zend_bool passive = FALSE;
-    zend_bool durable = FALSE;
-    zend_bool auto_delete = FALSE;    
+    zend_bool passive = 0;
+    zend_bool durable = 0;
+    zend_bool auto_delete = 0;
     
     int argc = ZEND_NUM_ARGS();
     int connection_id = -1;
@@ -681,10 +681,10 @@ PHP_FUNCTION(amqp_queue_declare)
     char *queue = NULL;
     int queue_len;
     
-    zend_bool passive = FALSE;
-    zend_bool durable = FALSE;
-    zend_bool exclusive = FALSE;
-    zend_bool auto_delete = TRUE;    
+    zend_bool passive = 0;
+    zend_bool durable = 0;
+    zend_bool exclusive = 0;
+    zend_bool auto_delete = 1;    
     
     int argc = ZEND_NUM_ARGS();
     int connection_id = -1;
