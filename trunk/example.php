@@ -34,11 +34,9 @@ $exchange ="myexchange.direct";
 $routing_key = "RoutingKey";
 
 // optional: declare exchange, declare queue, bind queue
-$res = amqp_exchange_declare($connection, $channel_id, $exchange, "direct");
-$res = amqp_queue_declare($connection, $channel_id, $queue, $passive = false, $durable = false, $exclusive = false, $auto_delete = true);
-$res = amqp_queue_bind($connection, $channel_id, $queue, $exchange, $routing_key);
-
-
+#$res = amqp_exchange_declare($connection, $channel_id, $exchange, "direct");
+#$res = amqp_queue_declare($connection, $channel_id, $queue, $passive = false, $durable = false, $exclusive = false, $auto_delete = true);
+#$res = amqp_queue_bind($connection, $channel_id, $queue, $exchange, $routing_key);
 
 // optinal, specify options for basic_publish()
 $options = array(
@@ -58,7 +56,6 @@ $options = array(
 );
 
 
-
 // send the message to rabbitmq
 $body = "Message Body";
 $start = microtime(true);
@@ -69,4 +66,6 @@ for ($i = 0; $i < 10; $i++) {
 
 $end = microtime(true);
 echo "Total publish time: " . ($end - $start) ."\n";
+amqp_connection_close($connection);
+
 

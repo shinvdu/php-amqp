@@ -18,13 +18,10 @@
  <license>PHP license 3.01</license>
  <release>
   <state>beta</state>
-  <version>0.0.5</version>
-  <date>2009-10-13</date>
+  <version>0.0.6</version>
+  <date>2009-10-14</date>
   <notes>
- * Renamed methods some methods due to inconsistency
- * Added persistent connections (amqp_connection_popen())
- * New functions: amqp_exchange_declare(), amqp_queue_declare(), amqp_queue_bind(), amqp_queue_unbind()
- * Replaced all remaining E_ERROR (fatal, script exits) with E_WARNING (non fatal, script continues)
+ * Fixed a bug related to request/module shutdown 
 </notes>
  </release>
   <configureoptions>
@@ -42,6 +39,19 @@
     </dir>
   </filelist>
   <changelog>
+
+ <release>
+  <state>beta</state>
+  <version>0.0.5</version>
+  <date>2009-10-13</date>
+  <notes>
+ * Renamed methods some methods due to inconsistency
+ * Added persistent connections (amqp_connection_popen())
+ * New functions: amqp_exchange_declare(), amqp_queue_declare(), amqp_queue_bind(), amqp_queue_unbind()
+ * Replaced all remaining E_ERROR (fatal, script exits) with E_WARNING (non fatal, script continues)
+</notes>
+ </release>
+
    <release>
     <state>beta</state>
     <version>0.0.2</version>
