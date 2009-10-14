@@ -73,12 +73,13 @@ typedef struct {
  */
 static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
+    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_amqp_connection called");
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
         amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
         if (amqp_conn->amqp_conn) {
             amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
-            amqp_destroy_connection(amqp_conn->amqp_conn);
+            // amqp_destroy_connection(amqp_conn->amqp_conn);
         }
         if (amqp_conn->sockfd) {
             close(amqp_conn->sockfd);
@@ -92,12 +93,13 @@ static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
  */
 static void _close_amqp_pconnection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
+    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_amqp_pconnection called");
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
         amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
         if (amqp_conn->amqp_conn) {
             amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
-            amqp_destroy_connection(amqp_conn->amqp_conn);
+            // amqp_destroy_connection(amqp_conn->amqp_conn);
         }
         if (amqp_conn->sockfd) {
             close(amqp_conn->sockfd);
@@ -253,7 +255,7 @@ PHP_FUNCTION(amqp_connection_open)
     int hostname_len;
     int port = 5672;
 
-    amqp_connection *amqp_conn = (amqp_connection*)emalloc(sizeof(amqp_connection));
+        amqp_connection *amqp_conn = (amqp_connection*)emalloc(sizeof(amqp_connection));
 
     if (zend_parse_parameters(argc TSRMLS_CC, "sl", &hostname, &hostname_len, &port) == FAILURE) {
         return;
@@ -458,13 +460,16 @@ PHP_FUNCTION(amqp_connection_close)
     int i = 0;
     if (amqp_conn->num_channels > 0) {
         for (i = amqp_conn->num_channels; i > 0; i--) {
-            amqp_channel_close(amqp_conn->amqp_conn, i, AMQP_REPLY_SUCCESS);
+           amqp_channel_close(amqp_conn->amqp_conn, i, AMQP_REPLY_SUCCESS);
         }
     }
+    
     amqp_conn->num_channels = 0;
+    amqp_conn->logged_in = 0;
 
     amqp_connection_close(amqp_conn->amqp_conn, AMQP_REPLY_SUCCESS);
-    amqp_destroy_connection(amqp_conn->amqp_conn);
+    // this cause segfaults ?!
+    // amqp_destroy_connection(amqp_conn->amqp_conn);
     close(amqp_conn->sockfd);
     RETURN_TRUE;
 }
