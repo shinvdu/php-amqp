@@ -18,7 +18,7 @@
  <license>PHP license 3.01</license>
  <release>
   <state>beta</state>
-  <version>0.0.6</version>
+  <version>0.0.7</version>
   <date>2009-10-14</date>
   <notes>
  * Fixed a bug related to request/module shutdown 
