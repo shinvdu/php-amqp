@@ -53,7 +53,7 @@ ZEND_DECLARE_MODULE_GLOBALS(amqp)
 static int le_amqp;
 static int le_amqp_persistent;
 
-#define PHP_AMQP_EXTENSION_VERSION "0.0.5"
+#define PHP_AMQP_EXTENSION_VERSION "0.0.7"
 #define PHP_AMQP_RES_NAME "Amqp Connection"
 
 
@@ -73,7 +73,6 @@ typedef struct {
  */
 static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
-    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_amqp_connection called");
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
         amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
@@ -93,7 +92,6 @@ static void _close_amqp_connection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
  */
 static void _close_amqp_pconnection(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 {
-    php_error_docref(NULL TSRMLS_CC, E_NOTICE, "_close_amqp_pconnection called");
     amqp_connection *amqp_conn = (amqp_connection *) rsrc->ptr;
     if (amqp_conn) {
         amqp_channel_close(amqp_conn->amqp_conn, 1, AMQP_REPLY_SUCCESS);
